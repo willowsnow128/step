@@ -121,3 +121,5 @@ int main() {
 
     return 0;
 }
+
+/*実行結果(small.txt)はのみで228*/
