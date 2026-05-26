@@ -115,7 +115,7 @@ class HashTable:
         # データ数がバケツサイズの70%を超えたら、サイズを約2倍に拡張する
         if self.item_count>=self.bucket_size*0.7:
             # ハッシュの衝突を減らすため、なるべく奇数（理想は素数）を維持する
-            self._rehash(self.bucket_size*2+1)
+            self.rehash(self.bucket_size*2+1)
         # 新規追加なのでTrueを返す
         return True
 ```
@@ -198,7 +198,7 @@ class HashTable:
                     if new_size%2==0:
                         new_size+=1
                 
-                    self._rehash(new_size)
+                    self.rehash(new_size)
                 return True
             
             # 次の要素へ進む前に、現在の要素をprev_itemとして記憶しておく
