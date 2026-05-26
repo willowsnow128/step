@@ -158,7 +158,7 @@ class HashTable:
         return self.item_count
     
     # テーブルサイズを変更し、すべての要素を再配置する
-    def _rehash(self, new_bucket_size):
+    def rehash(self, new_bucket_size):
         # 古いバケツの処理
         old_buckets=self.buckets
         
