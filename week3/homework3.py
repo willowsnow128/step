@@ -34,6 +34,16 @@ def read_division(line, index):
     token = {'type': 'DIV'}
     return token, index+1
 
+# コード編集部分：（の処理を追加
+def read_left_parentheses(line, index):
+    token = {'type': 'LPAREN'}
+    return token, index+1
+
+# コード編集部分：)の処理を追加
+def read_right_parentheses(line, index):
+    token = {'type': 'RPAREN'}
+    return token, index+1
+
 
 
 
@@ -53,10 +63,50 @@ def tokenize(line):
         # コード編集部分：割り算の処理を追加
         elif line[index] == '/':
             (token, index) = read_division(line, index)
+        # コード編集部分：（の処理を追加
+        elif line[index] == '(':
+            (token, index) = read_left_parentheses(line, index)
+        # コード編集部分：)の処理を追加
+        elif line[index] == ')':
+            (token, index) = read_right_parentheses(line, index)
         else:
             print('Invalid character found: ' + line[index])
             exit(1)
         tokens.append(token)
+    return tokens
+
+def resolve_parentheses(tokens):
+    stack=[]
+    index=0
+    
+    while index<len(tokens):
+        if tokens[index]['type']=='LPAREN':
+            # '('のインデックスをスタックにメモする
+            stack.append(index)
+            index+=1
+        
+        elif tokens[index]['type']=='RPAREN':
+            # 一番新しい'('の位置を取り出す
+            start_index=stack.pop()
+            end_index=index
+            
+            # '('と')'の中身のトークンだけを取り出す
+            inside_tokens=tokens[start_index+1:end_index]
+            
+            # 取り出した中身をevaluate関数に渡して計算結果をもらう
+            answer_number=evaluate(inside_tokens)
+            
+            # 新しいNUMBERトークンを作る
+            new_token={'type':'NUMBER','number':answer_number}
+            
+            # 元のtokensリストの'('から')'までの部分を、new_token1つに置き換える
+            tokens[start_index:end_index+1]=[new_token]
+            
+            # リストの長さが変わったので、indexの位置を変える
+            index=start_index
+        
+        else:
+            index+=1
     return tokens
 
 
@@ -114,8 +164,11 @@ def evaluate_add_sub(tokens):
     
 # 1周目は掛け算と割り算の処理、2週目に足し算と割り算の処理を行うようにする
 def evaluate(tokens):
+    # 括弧の処理を行う関数を呼び出して、括弧をなくしたリストを受け取る
+    tokens_after_parentheses = resolve_parentheses(tokens)
+    
     # 掛け算・割り算の処理をする関数から帰ってきた新しいリスト(pass1_tokens)を別の変数に受け取る
-    tokens_after_mul_div=evaluate_mul_div(tokens)
+    tokens_after_mul_div=evaluate_mul_div(tokens_after_parentheses)
     
     # その新しくなったリストを今度は足し算・引き算の関数に渡す
     final_answer = evaluate_add_sub(tokens_after_mul_div)
@@ -173,6 +226,21 @@ def run_test():
     test("0/3")
     test("3-5")  
     test("10/3")
+    
+    # homework3-括弧がある計算
+    # 括弧の四則演算
+    test("(1+2)")
+    test("(1+2)*3")
+    test("2*(3+4)")
+    test("10/(2+3)")
+    
+    # 課題の例
+    test("(3.0+4*(2-1))/5")
+    
+    # 括弧がたくさんある
+    test("((1+2)*3+4)*5")
+    test("10-((2+3)*2)")
+    test("(1+2)*(3+4)")
     
     
     
