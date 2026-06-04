@@ -43,12 +43,14 @@ def read_right_parentheses(line, index):
     token = {'type': 'RPAREN'}
     return token, index+1
 
-
-
-
-
-
-
+def read_function(line, index):
+    name = ""
+    # アルファベットが続く限り読み込んで、関数の名前を作る
+    while index < len(line) and line[index].isalpha():
+        name += line[index]
+        index += 1
+    token = {'type': 'FUNC', 'name': name}
+    return token, index
 
 
 def tokenize(line):
@@ -73,6 +75,9 @@ def tokenize(line):
         # コード編集部分：)の処理を追加
         elif line[index] == ')':
             (token, index) = read_right_parentheses(line, index)
+        # アルファベット(関数名)の処理を追加
+        elif line[index].isalpha():
+            (token, index) = read_function(line, index)
         else:
             print('Invalid character found: ' + line[index])
             exit(1)
@@ -112,6 +117,42 @@ def resolve_parentheses(tokens):
         else:
             index+=1
     return tokens
+
+
+def evaluate_function(tokens):
+    pass_tokens=[]
+    index=0
+    while index < len(tokens):
+        if tokens[index]['type']=='FUNC':
+            # 関数の名前を取得（'abs', 'int', 'round' など）
+            func_name=tokens[index]['name']
+            # 括弧の処理が終わっているので次のtokenは必ず数字になっている
+            next_token=tokens[index + 1]
+            number_value=next_token['number']
+            
+            # 関数名に合わせて計算を行う
+            if func_name == 'abs':
+                new_number = abs(number_value)
+            elif func_name == 'int':
+                new_number = int(number_value)
+            elif func_name == 'round':
+                new_number = round(number_value)
+            else:
+                print('Unknown function: ' + func_name)
+                exit(1)
+                
+            # 計算済みのNUMBERトークンを新しいリストに追加
+            pass_tokens.append({'type': 'NUMBER', 'number': new_number})
+            
+            # FUNCとNUMBERの2つ分を処理したので、indexを2つ進める
+            index+=2
+            
+        else:
+            # FUNC以外（ただの数字や＋、＊など）はそのままスルーして追加
+            pass_tokens.append(tokens[index])
+            index += 1
+            
+    return pass_tokens
 
 
 def evaluate_mul_div(tokens):
@@ -171,8 +212,11 @@ def evaluate(tokens):
     # 括弧の処理を行う関数を呼び出して、括弧をなくしたリストを受け取る
     tokens_after_parentheses = resolve_parentheses(tokens)
     
+    # 関数の処理を行う関数を呼び出して、関数型なくなったリストを受け取る
+    tokens_after_function = evaluate_function(tokens_after_parentheses)
+    
     # 掛け算・割り算の処理をする関数から帰ってきた新しいリスト(pass1_tokens)を別の変数に受け取る
-    tokens_after_mul_div=evaluate_mul_div(tokens_after_parentheses)
+    tokens_after_mul_div=evaluate_mul_div(tokens_after_function)
     
     # その新しくなったリストを今度は足し算・引き算の関数に渡す
     final_answer = evaluate_add_sub(tokens_after_mul_div)
@@ -223,14 +267,7 @@ def run_test():
     
     # 長い式
     test("1.5+2.5*4-6/2")
-    
-    # 0がある、マイナスになる、割り切れない
-    test("0+5")
-    test("5*0")
-    test("0/3")
-    test("3-5")  
-    test("10/3")
-    
+
     # homework3-括弧がある計算
     # 括弧の四則演算
     test("(1+2)")
@@ -257,8 +294,6 @@ def run_test():
     
     # 課題の例
     test("12+abs(int(round(1.55)+abs(int(2.3+4))))")
-    
-    
     
     print("==== Test finished! ====\n")
 

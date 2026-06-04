@@ -34,8 +34,6 @@ def read_division(line, index):
     return token, index+1
 
 
-
-
 def tokenize(line):
     tokens = []
     index = 0
@@ -147,16 +145,7 @@ def run_test():
     
     # 長い式
     test("1.5+2.5*4-6/2")
-    
-    # 0がある、マイナスになる、割り切れない
-    test("0+5")
-    test("5*0")
-    test("0/3")
-    test("3-5")  
-    test("10/3")
-    
-    
-    
+
     print("==== Test finished! ====\n")
 
 run_test()

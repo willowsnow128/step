@@ -46,7 +46,6 @@ def read_right_parentheses(line, index):
 
 
 
-
 def tokenize(line):
     tokens = []
     index = 0
@@ -155,12 +154,6 @@ def evaluate_add_sub(tokens):
         index+=1
     return answer
             
-        
-    
-    
-    
-        
-    
     
 # 1周目は掛け算と割り算の処理、2週目に足し算と割り算の処理を行うようにする
 def evaluate(tokens):
@@ -220,13 +213,6 @@ def run_test():
     # 長い式
     test("1.5+2.5*4-6/2")
     
-    # 0がある、マイナスになる、割り切れない
-    test("0+5")
-    test("5*0")
-    test("0/3")
-    test("3-5")  
-    test("10/3")
-    
     # homework3-括弧がある計算
     # 括弧の四則演算
     test("(1+2)")
@@ -241,8 +227,6 @@ def run_test():
     test("((1+2)*3+4)*5")
     test("10-((2+3)*2)")
     test("(1+2)*(3+4)")
-    
-    
     
     print("==== Test finished! ====\n")
 

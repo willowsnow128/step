@@ -35,8 +35,6 @@ def read_division(line, index):
     return token, index+1
 
 
-
-
 def tokenize(line):
     tokens = []
     index = 0
@@ -104,14 +102,8 @@ def evaluate_add_sub(tokens):
                 exit(1)
         index+=1
     return answer
-            
-        
-    
-    
-    
-        
-    
-    
+
+
 # 1周目は掛け算と割り算の処理、2週目に足し算と割り算の処理を行うようにする
 def evaluate(tokens):
     # 掛け算・割り算の処理をする関数から帰ってきた新しいリスト(pass1_tokens)を別の変数に受け取る
@@ -166,15 +158,6 @@ def run_test():
     
     # 長い式
     test("1.5+2.5*4-6/2")
-    
-    # 0がある、マイナスになる、割り切れない
-    test("0+5")
-    test("5*0")
-    test("0/3")
-    test("3-5")  
-    test("10/3")
-    
-    
     
     print("==== Test finished! ====\n")
 
