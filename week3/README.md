@@ -132,7 +132,7 @@ def evaluate_function(tokens):
     return pass_tokens
 ```
 
-## 3.乗除の処理（evaluate_mul_div）
+## 4.乗除の処理（evaluate_mul_div）
 括弧がなくなったリストを左から読み、*と/を優先して計算します。
 * **ポイント**
 - 記号を見つけたら.pop()で直前の数字を取り出し、直後の数字と計算します。その結果を新しいリスト**pass1_tokens**に追加していくことで、乗除だけが完了した新しいリストを作成しています。
@@ -142,31 +142,28 @@ def evaluate_mul_div(tokens):
     pass1_tokens=[]
     index=0
     while index<len(tokens):
-        # 1周目は掛け算と割り算の処理を行う
-        # 掛け算の処理
-        if tokens[index]['type']=='MUL':
+        # MULとDIVをひとまとめにして判定する
+        if tokens[index]['type'] in ['MUL', 'DIV']:
+            # 共通の処理：前後の数字を取り出す
             prev_token=pass1_tokens.pop()
             next_token=tokens[index+1]
-            new_number=prev_token['number']*next_token['number']
-            pass1_tokens.append({'type':'NUMBER','number':new_number})
-            # 次の数字も処理済みなので2個飛ばす
+            
+            # 実際の計算部分だけ分岐させる
+            if tokens[index]['type']=='MUL':
+                new_number=prev_token['number']*next_token['number']
+            else: # DIVの場合
+                new_number=prev_token['number']/next_token['number']
+                
+            # 共通の処理：新しいトークンを追加してインデックスを進める
+            pass1_tokens.append({'type': 'NUMBER', 'number': new_number})
             index+=2
-        # 割り算の処理
-        elif tokens[index]['type']=='DIV':
-            prev_token=pass1_tokens.pop()
-            next_token=tokens[index+1]
-            new_number=prev_token['number']/next_token['number']
-            pass1_tokens.append({'type':'NUMBER','number':new_number})
-            # 次の数字も処理済みなので2個飛ばす
-            index+=2
-    
         else:
             pass1_tokens.append(tokens[index])
             index+=1
     return pass1_tokens
 ```
 
-## 4.加減の処理（evaluate_add_sub）
+## 5.加減の処理（evaluate_add_sub）
 乗除が終わったリストに対して、最終的な足し算・引き算を行います。
 
 ```Python
@@ -175,20 +172,24 @@ def evaluate_add_sub(tokens):
     # 先頭にダミーの'+'を入れておく
     tokens.insert(0,{'type': 'PLUS'}) 
     index=1
-    while index<len(tokens):
-        if tokens[index]['type']=='NUMBER':
-            if tokens[index-1]['type']=='PLUS':
-                answer+=tokens[index]['number']
-            elif tokens[index-1]['type']=='MINUS':
-                answer-=tokens[index]['number']
+    while index < len(tokens):
+        if tokens[index]['type'] == 'NUMBER':
+            # 1つ前の記号（PLUSかMINUS）を変数に入れておく
+            operator_type=tokens[index-1]['type']
+            if operator_type in ['PLUS', 'MINUS']:
+                # 計算部分だけを分岐
+                if operator_type=='PLUS':
+                    answer+=tokens[index]['number']
+                else: # MINUSの場合
+                    answer-=tokens[index]['number']
             else:
                 print('Invalid syntax')
                 exit(1)
-        index+=1
+        index += 1
     return answer
 ```
 
-## evaluate関数(メイン)
+## 6.evaluate関数(メイン)
 細かく分けた関数を、順番に呼び出します。
 
 ```Python
