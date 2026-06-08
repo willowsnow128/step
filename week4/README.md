@@ -118,3 +118,108 @@
         print()
 ```
 
+## 最長経路を探索する(find_longest_path)
+* **実装のポイント**
+- まず、ゴール地点から逆向きに**BFS**を行い、全ページに対して「ゴールまでの最短距離マップ（**dist_to_goal**）」を事前計算しました。その後、スタート地点から**DFS**を行う際、次に行くページの候補を「ゴールまでの距離が**遠い順**」に優先して選ぶようにしています。
+- 再帰上限に引っかからないように**stack**配列(リスト)を用意し、**while**ループを用いた非再帰のDFSとして実装しました。これにより、メモリの許す限りどこまでも深い経路を探索できるようになりました。
+- DFSで次に行くページを選ぶ際、候補のリストを「ゴールに近い順（昇順）」に並べ替えてスタックに積んでいます。こうすることで、リストの最後尾に「一番遠いページ」が配置されるため、要素を取り出す際に**pop()**（末尾からの取り出し）を使うことができます。先頭からデータを取り出すより処理が高速（計算量O(1)）になり、大規模データの探索時間を短縮できました。
+
+```python
+def find_longest_path(self, start, goal):
+        #------------------------#
+        # Write your code here!  #
+        #------------------------#
+        title_to_id={}
+        for id, title in self.titles.items():
+            title_to_id[title]=id
+        start_id=title_to_id.get(start)
+        goal_id=title_to_id.get(goal)
+
+        if start_id is None or goal_id is None:
+            print("スタートまたはゴールが見つかりません。")
+            return
+        # BFS：ゴールから逆走して「距離マップ」を作る
+        # 矢印を逆向きにした「逆引き辞典」を作る
+        reverse_links=collections.defaultdict(list)
+        for u, neighbors in self.links.items():
+            for v in neighbors:
+                reverse_links[v].append(u)
+
+        dist_to_goal={}
+        queue=collections.deque([goal_id])
+        # ゴール自身の距離は0
+        dist_to_goal[goal_id]=0 
+
+        # ゴールからBFSで広がっていく
+        while queue:
+            curr=queue.popleft()
+            d=dist_to_goal[curr]
+            for prev in reverse_links[curr]:
+                if prev not in dist_to_goal:
+                    dist_to_goal[prev]=d+1
+                    queue.append(prev)
+                    
+        # DFS：距離マップを見ながら遠回りする
+        visited=set([start_id])
+        path=[start_id]
+        longest_path=[]
+
+        # 次の候補を計算して、距離が遠い順に取り出せるようにする関数
+        def get_sorted_neighbors(curr_id):
+            valid=[]
+            for nxt in self.links[curr_id]:
+                if nxt not in visited and nxt in dist_to_goal:
+                    valid.append(nxt)
+            
+            # 後で pop() を使って「末尾」から取り出すため、あえて「昇順（距離が近い順）」に並べておく、リストの最後尾に一番遠いページが来るようにする
+            def get_distance(node_id):
+                return dist_to_goal[node_id]
+            valid.sort(key=get_distance)
+            return valid
+
+        # スタックには「(今いるページID, 次に行ける候補リスト)」をセットで入れる
+        stack = [(start_id, get_sorted_neighbors(start_id))]
+
+        # スタックが空になる（全ての可能性を探し尽くす）までループ
+        while stack:
+            # スタックの一番上（現在地）を確認
+            curr_id, neighbors=stack[-1]
+
+            # ゴールに到着したら、記録を残して終了！
+            if curr_id==goal_id:
+                longest_path=list(path)
+                break
+
+            # まだ行ける候補が残っている場合
+            if neighbors:
+                # 候補リストの末尾（＝一番距離が遠いページ）を1つ取り出す
+                nxt=neighbors.pop()
+                
+                # 他のルートですでに訪問済みになっていないか最終確認して進む
+                if nxt not in visited:
+                    visited.add(nxt)
+                    path.append(nxt)
+                    # 次のページの情報をスタックの一番上に積んで、さらに奥へ進む
+                    stack.append((nxt, get_sorted_neighbors(nxt)))
+            else:
+                # もう行ける候補がない場合（行き止まり）は、バックトラック
+                # スタックと現在の経路から取り除き1歩戻る
+                stack.pop()
+                path.pop()
+
+        # 結果の出力とチェック
+        if longest_path:
+            # 経路の長さを出力
+            print(f"見つかった経路の長さ: {len(longest_path)} ページ（{len(longest_path) - 1} ステップ）")
+            
+            # 全部出力するとターミナルが溢れるので、最初と最後だけ表示する
+            start_title = self.titles[longest_path[0]]
+            end_title = self.titles[longest_path[-1]]
+            print(f"ルート: {start_title} -> ... (中略) ... -> {end_title}")
+            
+            # チェック関数で、正しい経路か確認
+            self.assert_path(longest_path, start, goal)
+            print("assert_path: 経路のルールチェックをパスしました！")
+        else:
+            print("経路が見つかりませんでした。")
+```
