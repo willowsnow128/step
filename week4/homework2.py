@@ -76,7 +76,12 @@ class Wikipedia:
         #------------------------#
         # Write your code here!  #
         #------------------------#
-        title_to_id={title: id for id, title in self.titles.items()}
+        # タイトル名からページIDを検索するための逆引き辞書
+        title_to_id={}
+        # 元の辞書から順番に取り出す
+        for id, title in self.titles.items():
+        # 新しい辞書に、キーと値をひっくり返して登録する
+            title_to_id[title] = id
         start_id=title_to_id.get(start)
         goal_id=title_to_id.get(goal)
         if start_id is None or goal_id is None:
@@ -90,7 +95,9 @@ class Wikipedia:
             current_id=path[-1]
             if current_id==goal_id:
                 # IDのリストを、ページタイトルのリストに変換
-                path_titles=[self.titles[node_id] for node_id in path]
+                path_titles = []
+                for node_id in path:
+                    path_titles.append(self.titles[node_id])
                 print("->".join(path_titles))
                 return path
             # 今いるページからリンクされている次のページを順番に確認
@@ -111,10 +118,14 @@ class Wikipedia:
         #------------------------#
         N=len(self.titles)
         # 最初のページランクを初期化
-        page_rank = {id: 1.0 for id in self.titles.keys()}
+        page_rank={}
+        for id in self.titles.keys():
+            page_rank[id]=1.0
         while True:
             # 次のターンのページランクを入れる箱を用意
-            new_page_rank={id: 0.0 for id in self.titles.keys()}
+            new_page_rank={}
+            for id in self.titles.keys():
+                new_page_rank[id]=0.0
             # 全員に均等に配るためのスコアを貯める変数
             pool=0.0
             
@@ -131,7 +142,9 @@ class Wikipedia:
             for node_id in self.titles.keys():
                 new_page_rank[node_id]+=base_add
             # 新しいスコアと古いスコアの差の2乗の合計を計算
-            diff_sum=sum((new_page_rank[i]-page_rank[i])**2 for i in self.titles.keys())
+            diff_sum=0.0
+            for i in self.titles.keys():
+                diff_sum+=(new_page_rank[i]-page_rank[i])**2
             print(f"現在の差分: {diff_sum}")
             
             if diff_sum<0.01:
@@ -141,11 +154,15 @@ class Wikipedia:
             page_rank=new_page_rank
         
         print("The most popular pages are:")
-        sorted_ranks=sorted(page_rank.items(), key=lambda x:x[1], reverse=True)
+        def get_score(item):
+            return item[1]
+            
+        # その関数の名前（get_score）をキーとして渡して並べ替える
+        sorted_ranks = sorted(page_rank.items(), key=get_score, reverse=True)
         for i in range(10):
-            if i < len(sorted_ranks):
-                node_id = sorted_ranks[i][0]
-                score = sorted_ranks[i][1]
+            if i<len(sorted_ranks):
+                node_id=sorted_ranks[i][0]
+                score=sorted_ranks[i][1]
                 print(f"{self.titles[node_id]}: {score}")
         print()
         
