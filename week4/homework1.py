@@ -68,7 +68,6 @@ class Wikipedia:
                 print(self.titles[dst], link_count_max)
         print()
 
-
     # Homework #1: 最短経路を見つける
     # 'start': 開始ページのタイトル
     # 'goal': 目的（ゴール）ページのタイトル
