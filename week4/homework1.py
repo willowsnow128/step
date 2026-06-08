@@ -76,7 +76,12 @@ class Wikipedia:
         #------------------------#
         # Write your code here!  #
         #------------------------#
-        title_to_id={title: id for id, title in self.titles.items()}
+        # タイトル名からページIDを検索するための逆引き辞書
+        title_to_id={}
+        # 元の辞書から順番に取り出す
+        for id, title in self.titles.items():
+        # 新しい辞書に、キーと値をひっくり返して登録する
+            title_to_id[title] = id
         start_id=title_to_id.get(start)
         goal_id=title_to_id.get(goal)
         if start_id is None or goal_id is None:
@@ -90,7 +95,9 @@ class Wikipedia:
             current_id=path[-1]
             if current_id==goal_id:
                 # IDのリストを、ページタイトルのリストに変換
-                path_titles=[self.titles[node_id] for node_id in path]
+                path_titles = []
+                for node_id in path:
+                    path_titles.append(self.titles[node_id])
                 print("->".join(path_titles))
                 return path
             # 今いるページからリンクされている次のページを順番に確認
