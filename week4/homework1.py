@@ -10,7 +10,7 @@ class Wikipedia:
         # 例えば、self.titles[1234]はIDが1234であるページのタイトルを返す
         self.titles = {}
 
-        # ページリンクの集合
+        # ページリンクの集合 
         # 例えば、self.links[1234]はIDが1234のページからリンクされている
         # ページIDの配列を返す
         self.links = {}

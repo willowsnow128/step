@@ -12,7 +12,7 @@ class Wikipedia:
 
         # ページリンクの集合
         # 例えば、self.links[1234]はIDが1234のページからリンクされている
-        # ページIDの配列を返す
+        # ページIDの配列を返す 
         self.links = {}
 
         # pagesファイルを読み込んで、self.titlesに格納する
