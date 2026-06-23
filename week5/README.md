@@ -103,25 +103,144 @@ solve⁠ 関数の前半では、「**現在地から最も近い未訪問の都
 本プログラムは、巡回セールスマン問題に対して、スコアの向上と実行時間の安定化を両立させるため、3つのアルゴリズムを組み合わせたハイブリッド手法を実装したものです。
 単なる「2-optのみ」では局所最適解から抜け出せないという弱点があるため、確率的に改悪を受け入れる「焼きなまし法」を導入しました。また、実行時間が爆発するのを防ぐため、時間制限による制御を行っています。
 
-## 処理の流れ
+# TSPソルバー詳細解説：Greedy + 時間制限付き焼きなまし法 + 2-opt
 
-### ステップ1：貪欲法（Greedy）による初期解構築
-最初からランダムな状態から始めると効率が悪いため、まずは「現在地から最も近い未訪問の都市を選ぶ」という貪欲法を使い、ベースとなるある程度筋の良いルート（初期解）を高速に作成します。
+本ドキュメントでは、巡回セールスマン問題（TSP）を解くハイブリッドソルバーのソースコードについて、ブロックごとにその役割と仕組みを詳しく解説します。
 
-### ステップ2：時間制限付き焼きなまし法（Simulated Annealing）
-焼きなまし法を実行します。
+---
 
-* **時間制限による管理 (`TIME_LIMIT = 1.8`)**
-  ループ回数で制御するのではなく、`time.time()` を用いて1課題あたり「一律1.8秒間」愚直にループを回し続けます。
-* **温度の動的変化**
-  経過時間（`elapsed`）の割合に応じて、温度 `T` を初期温度（100.0）から終了温度（0.0001）まで滑らかに反比例させて低下させます。
-* **確率的な遷移の判定**
-  新しく選んだ2辺の距離の差（`diff = d2 - d1`）を計算します。
-  * 距離が短くなる場合（`diff < 0`）は無条件で採用します。
-  * 距離が長くなる場合（`diff > 0`）でも、`math.exp(-diff / T)` から算出される確率を下回れば、あえてその改悪を受け入れます。これによって局所最適解（罠の谷底）を飛び越えます。
-* **最高記録の保持**
-  終盤に改悪した状態で終了してしまわないよう、これまでの計算の中で最も距離が短かった瞬間（最高記録）のルートを常に `best_tour` として保存しています。
+## 1. 準備・モジュールのインポートと距離計算
+```python
+import sys
+import math
+import random
+import time  # 時間を計測するために追加
+from common import print_tour, read_input, format_tour
 
-### ステップ3：2-opt法
-焼きなまし法が導き出したベストルート（`best_tour`）を最後に2-opt法に引き渡し、総当たりで残った交差を完全に解消して最終的な解答を出力します。
+def distance(city1, city2):
+    return math.sqrt((city1[0] - city2[0]) ** 2 + (city1[1] - city2[1]) ** 2)
 
+def calc_total_dist(tour, cities):
+    dist = 0
+    N = len(tour)
+    for i in range(N):
+        dist += distance(cities[tour[i]], cities[tour[(i + 1) % N]])
+    return dist
+```
+
+## 2. 最後に使う2-opt関数
+```python
+def two_opt(tour, cities):
+    N = len(tour)
+    improved = True
+    while improved:
+        improved = False
+        for i in range(N):
+            for j in range(i + 2, N):
+                if i == 0 and j == N - 1:
+                    continue
+                city_a = tour[i]
+                city_b = tour[(i + 1) % N]
+                city_c = tour[j]
+                city_d = tour[(j + 1) % N]
+                d1 = distance(cities[city_a], cities[city_b]) + distance(cities[city_c], cities[city_d])
+                d2 = distance(cities[city_a], cities[city_c]) + distance(cities[city_b], cities[city_d])
+                if d2 < d1:
+                    tour[i+1:j+1] = reversed(tour[i+1:j+1])
+                    improved = True
+    return tour
+```
+* **焼きなまし法** の後に2-optを行うことで、より最短経路を探すことができます。
+- 経路の中から独立した2つの道（A-B と C-D）を総当たりで選びます。
+- 繋ぎ直した後の距離（d2）が、現在の距離（d1）よりも短くなる場合（d2 < d1）のみ、配列のスライスとreversed() を用いてルートを反転させて繋ぎ直します。
+- 円の隣り合う辺をスキップするため、j の開始位置を i + 2 にし、最初と最後の組み合わせ（i == 0 and j == N - 1）を continue で除外しています。
+
+## 3. Solve関数
+### 前半(貪欲法)
+```python
+def solve(cities):
+    N = len(cities)
+    unvisited = set(range(N))
+    tour = [0]
+    unvisited.remove(0)
+
+    # 貪欲法
+    current_city = 0
+    while unvisited:
+        next_city = None
+        min_dist = float('inf')
+        for candidate in unvisited:
+            dist = distance(cities[current_city], cities[candidate])
+            if dist < min_dist:
+                min_dist = dist
+                next_city = candidate
+        tour.append(next_city)
+        unvisited.remove(next_city)
+        current_city = next_city
+```
+* **実装のポイント**
+- **初期設定**
+- 未訪問の都市を高速に管理するため、unvisited に set（集合）型で都市番号を格納します。スタート地点を 0 番の都市に固定し、tour = [0] から出発します。
+- **貪欲法**
+現在地（current_city）から、まだ行っていないすべての都市（candidate）への距離をループで計測し、一番近い都市（next_city）を特定して移動します。これを未訪問の都市がなくなるまで繰り返すことで、この後の探索のベースとなる初期ルートを高速に作成します。
+
+### 後半（焼きなまし法）
+```python
+# 焼きなまし法
+    current_dist = calc_total_dist(tour, cities)
+    best_dist = current_dist
+    best_tour = tour.copy()
+    
+    # パラメータ設定
+    TIME_LIMIT = 1.8  # 1つの課題につき1.8秒で強制終了
+    T_start = 100.0   # 初期温度
+    T_end = 0.0001    # 終了温度
+    
+    start_time = time.time()
+    
+    while True:
+        current_time = time.time()
+        elapsed = current_time - start_time
+        
+        # 1.8秒経過したらループを抜ける
+        if elapsed > TIME_LIMIT:
+            break
+            
+        # 時間の経過に合わせて温度を下げる
+        T = T_start * ((T_end / T_start) ** (elapsed / TIME_LIMIT))
+        
+        i = random.randint(0, N - 1)
+        j = random.randint(0, N - 1)
+        if i == j or abs(i - j) <= 1 or abs(i - j) == N - 1:
+            continue
+        if i > j:
+            i, j = j, i
+
+        city_a = tour[i]
+        city_b = tour[(i + 1) % N]
+        city_c = tour[j]
+        city_d = tour[(j + 1) % N]
+
+        d1 = distance(cities[city_a], cities[city_b]) + distance(cities[city_c], cities[city_d])
+        d2 = distance(cities[city_a], cities[city_c]) + distance(cities[city_b], cities[city_d])
+        diff = d2 - d1
+
+        if diff < 0 or random.random() < math.exp(-diff / T):
+            tour[i+1:j+1] = reversed(tour[i+1:j+1])
+            current_dist += diff
+            if current_dist < best_dist:
+                best_dist = current_dist
+                best_tour = tour.copy()
+```
+* **実装のポイント**
+- **時間制限による制御**
+- time.time() を使って、1つの問題につき正確に1.8秒間だけループを回します。これにより、都市数 N が非常に大きな問題でもプログラムが終了します。
+
+- **温度 T の動的制御**
+経過時間（elapsed）の割合に応じて、温度 T を初期温度から終了温度まで滑らかに減少させます。
+
+- **ランダムな近傍選択と遷移判定**
+- random.randint を用いて、ランダムに2つの道を選択します。繋ぎ直した後の距離の差（diff = d2 - d1）を計算し、短くなる場合は当然採用します。
+- もし長くなってしまう（改悪になる）場合でも、現在の温度 T に応じた確率（math.exp(-diff / T)）を下回ればあえて採用します。これによって、2-optで発生する局所最適解の谷を抜けるようにしています。
+- **最も良かったものの保存**
+- 終盤に改悪した状態で終了してしまわないよう、過去最高スコアを更新した瞬間のルートを常に best_tour = tour.copy() として別メモリに保存しておきます。
