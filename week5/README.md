@@ -188,8 +188,8 @@ def solve(cities):
     best_tour = tour.copy()
     
     # パラメータ設定
-    TIME_LIMIT = 1.8  # 1つの課題につき1.8秒で強制終了
-    T_start = 100.0   # 初期温度
+    TIME_LIMIT = 600  
+    T_start = 200.0   # 初期温度
     T_end = 0.0001    # 終了温度
     
     start_time = time.time()
@@ -198,7 +198,6 @@ def solve(cities):
         current_time = time.time()
         elapsed = current_time - start_time
         
-        # 1.8秒経過したらループを抜ける
         if elapsed > TIME_LIMIT:
             break
             
@@ -230,7 +229,7 @@ def solve(cities):
 ```
 * **実装のポイント**
 - **時間制限による制御**
-- time.time() を使って、1つの問題につき正確に1.8秒間だけループを回します。これにより、都市数 N が非常に大きな問題でもプログラムが終了します。
+- time.time() を使って、1つの問題につき600秒間だけループを回します。これにより、都市数 N が非常に大きな問題でもプログラムが終了します。
 
 - **温度 T の動的制御**
 経過時間（elapsed）の割合に応じて、温度 T を初期温度から終了温度まで滑らかに減少させます。
