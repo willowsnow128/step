@@ -61,8 +61,8 @@ def solve(cities):
     best_tour = tour.copy()
     
     # パラメータ設定
-    TIME_LIMIT = 1.8  # 1つの課題につき1.8秒で強制終了
-    T_start = 100.0   # 初期温度
+    TIME_LIMIT = 600
+    T_start = 200.0   # 初期温度
     T_end = 0.0001    # 終了温度
     
     start_time = time.time()
@@ -71,7 +71,6 @@ def solve(cities):
         current_time = time.time()
         elapsed = current_time - start_time
         
-        # 1.8秒経過したらループを抜ける
         if elapsed > TIME_LIMIT:
             break
             
@@ -107,7 +106,7 @@ def solve(cities):
     return final_tour
 
 if __name__ == '__main__':
-    for i in range(8):
+    for i in range(6,8):
         input_file = f'input_{i}.csv'
         output_file = f'output_{i}.csv'
         
