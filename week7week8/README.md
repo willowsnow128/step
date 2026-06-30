@@ -29,6 +29,11 @@ typedef struct my_heap_t {
   //空き箱がない時にエラーが起きないように使うためのもの
   my_metadata_t dummy;
 } my_heap_t;
+
+//
+// Static variables (DO NOT ADD ANOTHER STATIC VARIABLES!)
+//
+my_heap_t my_heap;
 ```
 ## ヘルパー関数(リストの操作)
 - my_malloc で最適な領域を見つけた際の切り離しや、my_free で返却された領域をリストに戻す際に、これらの関数を呼び出してポインタを安全に繋ぎ変えます。
