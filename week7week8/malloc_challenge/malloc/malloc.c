@@ -32,38 +32,49 @@ typedef struct my_metadata_t {
   struct my_metadata_t *next;
 } my_metadata_t;
 
-typedef struct my_heap_t {
-  //空き箱リストの1番最初の空き箱の場所をキープしておくためのポインタ
-  my_metadata_t *free_head;
-  //空き箱がない時にエラーが起きないように使うためのもの
-  my_metadata_t dummy;
-} my_heap_t;
+#define NUM_BINS 4
 
+typedef struct my_heap_t {
+  // 管理センターの受付をBinの数（4つ）だけ配列にする
+  my_metadata_t *free_heads[NUM_BINS];
+  my_metadata_t dummies[NUM_BINS];
+} my_heap_t;
 //
 // Static variables (DO NOT ADD ANOTHER STATIC VARIABLES!)
 //
 my_heap_t my_heap;
 
+// サイズから適切なBinの番号（0〜3）を計算する関数
+int get_bin_index(size_t size) {
+  if (size <= 64) return 0;
+  if (size <= 256) return 1;
+  if (size <= 1024) return 2;
+  return 3;
+}
+
+
 //
 // Helper functions (feel free to add/remove/edit!)
 //
 
-//使い終わった空き箱（metadata）を、空き箱リストの一番先頭（先頭ノード）に追加する関数
 void my_add_to_free_list(my_metadata_t *metadata) {
   assert(!metadata->next);
-  //追加する空き箱の next（次の住所）を、「現在のリストの一番最初の箱」にする
-  metadata->next = my_heap.free_head;
-  my_heap.free_head = metadata;
+  // サイズから適切なBinを見つける
+  int bin_index = get_bin_index(metadata->size);
+  
+  // 見つけたBinの先頭に追加する
+  metadata->next = my_heap.free_heads[bin_index];
+  my_heap.free_heads[bin_index] = metadata;
 }
 
 void my_remove_from_free_list(my_metadata_t *metadata, my_metadata_t *prev) {
-  //もし取り出したい箱の前に箱がすでにある場合
   if (prev) {
     prev->next = metadata->next;
-  } else { //ない場合
-    my_heap.free_head = metadata->next;
+  } else {
+    // 先頭の要素を削除する場合は、どのBinの先頭かをサイズから判定する
+    int bin_index = get_bin_index(metadata->size);
+    my_heap.free_heads[bin_index] = metadata->next;
   }
-  //今の自分のデータと次のデータの関係をなくして切り離す
   metadata->next = NULL;
 }
 
@@ -73,11 +84,13 @@ void my_remove_from_free_list(my_metadata_t *metadata, my_metadata_t *prev) {
 
 // This is called at the beginning of each challenge.
 void my_initialize() {
-  my_heap.free_head = &my_heap.dummy;
-  my_heap.dummy.size = 0;
-  my_heap.dummy.next = NULL;
+  // 4つ分のBinのダミーと先頭ポインタを初期化する
+  for (int i = 0; i < NUM_BINS; i++) {
+    my_heap.free_heads[i] = &my_heap.dummies[i];
+    my_heap.dummies[i].size = 0;
+    my_heap.dummies[i].next = NULL;
+  }
 }
-
 // この my_malloc()は、プログラム内で新しいデータ用のメモリが要求されるたびに呼び出される
 // 引数で渡される size（欲しいバイト数）は、必ず8の倍数に調整されており、8バイトから4000バイトの間であることが保証されている
 // 指定された2つの関数以外、C言語の標準ライブラリ関数（他のmallocなど）を使ってはいけない。
@@ -89,30 +102,36 @@ while (metadata && metadata->size < size) {
 これだと、先に来た小さいデータが大きい箱を埋めてしまうことになる！
 */
 void *my_malloc(size_t size) {
-  my_metadata_t *metadata = my_heap.free_head;
+  my_metadata_t *metadata = NULL;
   my_metadata_t *prev = NULL;
-  // Best-fit: 空きリスト全体を調べて、要求サイズを満たす最小の空き領域を探す
   my_metadata_t *best_metadata = NULL;
   my_metadata_t *best_prev = NULL;
-  
-  my_metadata_t *current = my_heap.free_head;
-  my_metadata_t *current_prev = NULL;
 
-  //リストの先頭からNULLになるまで全部見る
-  while (current) {
-    // 要求されたサイズ以上の空き領域が見つかった場合
-    if (current->size >= size) {
-      // まだ候補が見つかっていない、または今まで見つけた候補よりもさらにぴったりな場合
-      if (!best_metadata || current->size < best_metadata->size) {
-        best_metadata = current;
-        best_prev = current_prev;
+  // 要求サイズが入る可能性のある一番小さなBinの番号を計算
+  int start_bin = get_bin_index(size);
+
+  // start_binから順番により大きなBinを探していく
+  for (int i = start_bin; i < NUM_BINS; i++) {
+    my_metadata_t *current = my_heap.free_heads[i];
+    my_metadata_t *current_prev = NULL;
+
+    // 現在のBinの中でBest-fitを探す
+    while (current) {
+      if (current->size >= size) {
+        if (!best_metadata || current->size < best_metadata->size) {
+          best_metadata = current;
+          best_prev = current_prev;
+        }
       }
+      current_prev = current;
+      current = current->next;
     }
-    // 次の空き領域へ進む
-    current_prev = current;
-    current = current->next;
-  }
 
+    // もし現在のBinで使える箱が見つかったら、これ以上大きなBinを探す必要はないのでループを抜ける
+    if (best_metadata) {
+      break;
+    }
+  }
   // 見つかったベストな空き領域を代入
   metadata = best_metadata;
   prev = best_prev;
@@ -207,30 +226,30 @@ Finished!
 ====================================================
 Challenge #1    |   simple_malloc =>       my_malloc
 --------------- + --------------- => ---------------
-       Time [ms]|               6 =>            1000
+       Time [ms]|               9 =>             844
 Utilization [%] |              70 =>              70
 ====================================================
 Challenge #2    |   simple_malloc =>       my_malloc
 --------------- + --------------- => ---------------
-       Time [ms]|               4 =>             651
+       Time [ms]|               4 =>             655
 Utilization [%] |              40 =>              40
 ====================================================
 Challenge #3    |   simple_malloc =>       my_malloc
 --------------- + --------------- => ---------------
-       Time [ms]|              79 =>             786
+       Time [ms]|              78 =>             712
 Utilization [%] |               9 =>              51
 ====================================================
 Challenge #4    |   simple_malloc =>       my_malloc
 --------------- + --------------- => ---------------
-       Time [ms]|           17851 =>            6890
+       Time [ms]|           17911 =>             655
 Utilization [%] |              15 =>              72
 ====================================================
 Challenge #5    |   simple_malloc =>       my_malloc
 --------------- + --------------- => ---------------
-       Time [ms]|           11552 =>            4060
+       Time [ms]|           11596 =>             695
 Utilization [%] |              15 =>              75
 
 Challenge done!
 Please copy & paste the following data in the score sheet!
-1000,70,651,40,786,51,6890,72,4060,75,
+844,70,655,40,712,51,655,72,695,75,
 */
